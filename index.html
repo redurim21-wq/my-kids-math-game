@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>프리미엄 사칙연산 큐브 게임</title>
+    <style>
+        /* [폰트 설정] Pretendard */
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        
+        /* [테마 색상 설정] */
+        :root {
+            --primary: #6C5CE7;      
+            --success: #00B894;      
+            --error: #FF7675;        
+            --bg-color: #F4F1EA;     
+            --panel-bg: #FFFFFF;     
+            --text-main: #2D3436;    
+            --text-muted: #636E72;   
+        }
+        
+        body {
+            font-family: 'Pretendard', sans-serif; 
+            background-color: var(--bg-color);     
+            margin: 0;
+            display: flex;
+            justify-content: center; 
+            align-items: center;     
+            min-height: 100vh;       
+            color: var(--text-main);
+            user-select: none;
+            touch-action: manipulation; /* 모바일 더블 탭 확대 방지 */
+        }
+        
+        .game-wrapper {
+            display: flex;           
+            gap: 20px;               
+            width: 1200px;           
+            max-width: 96vw;         
+            height: 750px;           
+            position: relative;
+        }
+        
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 28px;     
+            box-shadow: 0 15px 35px rgba(0,0,0,0.06); 
+            padding: 24px;           
+            display: flex;
+            flex-direction: column;  
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* ========================================= */
+        /* 1. 왼쪽 패널 (문제 출제 및 숫자 키패드 영역) */
+        /* ========================================= */
+        .panel-left {
+            flex: 1.3;               
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(145deg, #83a4d4, #b6fbff); 
+            color: white;
+            text-align: center;
+            box-shadow: inset 0 0 20px rgba(255,255,255,0.5), 0 15px 35px rgba(0,0,0,0.06);
+            padding: 30px 24px;
+        }
+        
+        .q-number {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.15); 
+            padding: 8px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);   
+        }
+        
+        .problem-text {
+            font-size: 75px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            text-shadow: 3px 6px 12px rgba(0,0,0,0.15); 
+            margin-bottom: 20px;
+        }
+        
+        .input-display {
+            width: 90%;
+            height: 75px;
+            background: #FFFFFF;
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 45px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            color: var(--primary);
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.08); 
+            border: 3px solid transparent;
+            transition: border-color 0.2s;
+        }
+        
+        .keypad-container {
+            display: flex;
+            gap: 16px;
+            width: 90%;
+            justify-content: center;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 10px;
+            flex: 1;
+        }
+        
+        .keypad button {
+            background: #FFFFFF;
+            border: none;
+            border-radius: 14px;
+            height: 56px;
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 0 5px 0 rgba(0,0,0,0.15); 
+        }
+        
+        .keypad button:active {
+            transform: translateY(5px);      
+            box-shadow: 0 0 0 rgba(0,0,0,0.15); 
+        }
+        
+        .btn-del { color: var(--error) !important; } 
+        
+        .btn-action {
+            background: var(--primary) !important;
+            color: white !important;
+            box-shadow: 0 5px 0 #5A4BDB !important;
+        }
+        .btn-action:active { box-shadow: 0 0 0 #5A4BDB !important; }
+        
+        .btn-next {
+            width: 85px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            font-size: 20px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 5px 0 #00997B;
+            
+            visibility: hidden;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+        }
+        
+        .btn-next.show {
+            visibility: visible;
+            opacity: 1;
+            transform: scale(1);
+        }
+        .btn-next.show:active {
+            transform: scale(1) translateY(5px);
+            box-shadow: 0 0 0 #00997B;
+        }
+        
+        /* ========================================= */
+        /* 2. 가운데 패널 (정답 큐브 시각화 영역) */
+        /* ========================================= */
+        .panel-center {
+            flex: 1.8; 
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+        
+        .visualization-area {
+            width: 100%;
+            height: 100%;
+            background: #FDFDFD;
+            border: 2px dashed #DFE6E9;
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0; 
+            transition: opacity 0.4s ease-in-out;
+            padding: 30px 20px;
+            box-sizing: border-box;
+            visibility: hidden;
+            overflow: hidden; 
+        }
+        
+        .visual-equation {
+            display: flex;
+            flex-direction: column; 
+            align-items: center;    
+            justify-content: center; 
+            gap: 12px; 
+            width: 100%;
+        }
+        
+        .equation-row {
+            display: flex;
+            align-items: center; 
+            justify-content: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .grouped-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .dashed-box {
+            border: 3px dashed #A4B0BE;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+        }
+        
+        .drop-jelly {
+            opacity: 0;
+            transform: translateY(-40px) scale(0.8); 
+            animation: dropJelly 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; 
+        }
+
+        @keyframes dropJelly {
+            0% { opacity: 0; transform: translateY(-40px) scale(0.8); }
+            40% { opacity: 1; transform: translateY(0) scale(1.05, 0.95); } 
+            60% { transform: scale(0.95, 1.05); } 
+            80% { transform: scale(1.02, 0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1, 1); } 
+        }
+        
+        .visual-divider {
+            width: 75%; 
+            height: 3px; 
+            background-color: #B2BEC3; 
+            border-radius: 2px;
+            margin: 10px 0; 
+        }
+
+        .cube-group-10 { display: flex; flex-direction: column; align-items: flex-start; }
+        .cube-stack { display: flex; flex-direction: column; align-items: flex-start; }
+        .cube-row { display: flex; justify-content: flex-start; width: 100%; }
+        .cube { flex-shrink: 0; }
+        .empty-cube { visibility: hidden; }
+
+        .visual-operator {
+            font-size: 45px; 
+            font-weight: 900;
+            color: #636E72;
+            margin: 0 10px;
+            display: inline-block;
+        }
+
+        .explanation-msg {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-top: 20px;
+            text-align: center; 
+            width: 100%;
+            min-height: 35px;
+        }
+        
+        .feedback-msg {
+            margin-top: 10px;
+            font-size: 24px;
+            font-weight: 800;
+            min-height: 35px;
+            text-align: center; 
+            width: 100%;
+        }
+        
+        /* ========================================= */
+        /* 3. 오른쪽 패널 (진행 상황 트래커) */
+        /* ========================================= */
+        .panel-right {
+            width: 180px; 
+            background: var(--panel-bg);
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .tracker-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin-bottom: 16px;
+            text-align: center;
+            color: var(--text-main);
+            padding-bottom: 12px;
+            border-bottom: 2px solid #F1F2F6;
+        }
+        
+        .tracker-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; 
+            flex: 1;
+            overflow-y: auto; 
+            padding-right: 5px; 
+        }
+
+        .tracker-list::-webkit-scrollbar { width: 6px; height: 6px; }
+        .tracker-list::-webkit-scrollbar-track { background: #FDFDFD; border-radius: 10px; }
+        .tracker-list::-webkit-scrollbar-thumb { background: #DFE6E9; border-radius: 10px; }
+        
+        .tracker-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #F8F9FA;
+            padding: 10px 12px; 
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 16px; 
+            color: var(--text-muted);
+            transition: all 0.2s;
+            flex-shrink: 0; 
+        }
+        
+        .tracker-item.active {
+            background: #F0EFFF;
+            color: var(--primary);
+            transform: scale(1.03);
+            box-shadow: 0 4px 10px rgba(108, 92, 231, 0.1);
+        }
+        
+        .mark {
+            font-size: 18px;
+        }
+        
+        /* ========================================= */
+        /* 시작/종료 오버레이 화면 */
+        /* ========================================= */
+        .overlay-screen {
+            position: absolute; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 28px;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .overlay-screen.hidden { display: none; } 
+        
+        .overlay-screen h2 { font-size: 46px; color: var(--primary); margin-bottom: 20px; }
+        .overlay-screen p { font-size: 26px; color: var(--text-main); font-weight: 700; margin-bottom: 40px; line-height: 1.5; }
+
+        .settings-box {
+            background: #F8F9FA;
+            padding: 30px;
+            border-radius: 20px;
+            border: 2px solid #DFE6E9;
+            margin-bottom: 40px;
+            width: 80%;
+            max-width: 450px;
+            text-align: left;
+        }
+
+        .settings-box label { 
+            font-size: 22px; 
+            font-weight: 800; 
+            color: var(--text-main); 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            margin-bottom: 15px; 
+        }
+        
+        .settings-box input[type="range"] {
+            width: 100%;
+            height: 10px;
+            border-radius: 5px;
+            background: #DFE6E9;
+            outline: none;
+            -webkit-appearance: none;
+            margin-bottom: 30px;
+        }
+        .settings-box input[type="range"]:last-child {
+            margin-bottom: 0; 
+        }
+        .settings-box input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 26px;
+            height: 26px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .settings-box select {
+            font-size: 20px;
+            padding: 6px 12px;
+            border-radius: 12px;
+            border: 2px solid #DFE6E9;
+            color: var(--primary);
+            font-weight: bold;
+            font-family: 'Pretendard', sans-serif;
+            outline: none;
+            cursor: pointer;
+            background-color: white;
+        }
+        
+        .btn-restart {
+            padding: 20px 50px;
+            font-size: 28px;
+            font-weight: 800;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #5A4BDB;
+            transition: 0.1s;
+        }
+        .btn-restart:active { transform: translateY(8px); box-shadow: 0 0 0 #5A4BDB; }
+
+        /* ========================================= */
+        /* 🔥 스마트폰/태블릿 모바일 반응형 디자인 🔥 */
+        /* ========================================= */
+        @media (max-width: 900px) {
+            body { 
+                height: auto; 
+                padding: 10px 0; 
+            }
+            .game-wrapper {
+                flex-direction: column; /* 가로 배열을 세로 스택으로 변경 */
+                width: 95vw;
+                height: auto;
+                gap: 15px;
+            }
+            .panel {
+                width: 100%;
+                padding: 20px 15px;
+                box-sizing: border-box;
+            }
+            .problem-text {
+                font-size: 60px; /* 폰트 축소 */
+            }
+            .input-display {
+                height: 65px;
+                font-size: 40px;
+            }
+            .keypad-container {
+                width: 100%;
+            }
+            .keypad button {
+                height: 50px;
+                font-size: 24px;
+            }
+            .panel-right {
+                width: 100%; /* 트래커 가로로 꽉 채우기 */
+                flex-direction: column;
+            }
+            .tracker-list {
+                flex-direction: row; /* 세로형 리스트를 가로 스와이프 형식으로 변경 */
+                overflow-x: auto;
+                overflow-y: hidden;
+                padding-bottom: 10px;
+            }
+            .tracker-item {
+                flex-direction: column; /* 글씨와 동그라미 위아래 배치 */
+                min-width: 65px;
+                font-size: 14px;
+            }
+            .mark {
+                font-size: 16px;
+                margin-top: 5px;
+            }
+            .visual-operator {
+                font-size: 30px;
+            }
+            .explanation-msg {
+                font-size: 22px;
+            }
+            .feedback-msg {
+                font-size: 20px;
+            }
+            .settings-box label {
+                font-size: 18px;
+            }
+            .settings-box select {
+                font-size: 16px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <!-- [시작 화면] -->
+        <div class="overlay-screen" id="start-screen">
+            <h2>어린이 사칙연산 게임 🎈</h2>
+            <div class="settings-box">
+                <label for="hint-toggle">
+                    <span>💡 문제 도움 (시각화 힌트)</span>
+                    <select id="hint-toggle">
+                        <option value="on">켜기 (ON)</option>
+                        <option value="off">끄기 (OFF)</option>
+                    </select>
+                </label>
+                <div style="height: 15px;"></div>
+                
+                <label for="max-answer">
+                    <span>가장 큰 정답 숫자</span>
+                    <span id="max-val-display" style="color: var(--primary);">25</span>
+                </label>
+                <input type="range" id="max-answer" min="5" max="100" value="25" oninput="document.getElementById('max-val-display').innerText = this.value">
+                
+                <label for="max-questions">
+                    <span>문제 개수</span>
+                    <span><span id="max-q-display" style="color: var(--primary);">10</span> 문제</span>
+                </label>
+                <input type="range" id="max-questions" min="10" max="20" value="10" oninput="document.getElementById('max-q-display').innerText = this.value">
+            </div>
+            <button class="btn-restart" onclick="startGame()">게임 시작 🚀</button>
+        </div>
+
+        <div class="panel panel-left">
+            <div class="q-number" id="q-number">문제 1 / 10</div>
+            <div class="problem-text" id="problem">? + ? = ?</div>
+            
+            <div class="input-display" id="input-display"></div>
+            
+            <div class="keypad-container">
+                <div class="keypad" id="keypad">
+                    <button onclick="inputNumber(1)">1</button><button onclick="inputNumber(2)">2</button><button onclick="inputNumber(3)">3</button>
+                    <button onclick="inputNumber(4)">4</button><button onclick="inputNumber(5)">5</button><button onclick="inputNumber(6)">6</button>
+                    <button onclick="inputNumber(7)">7</button><button onclick="inputNumber(8)">8</button><button onclick="inputNumber(9)">9</button>
+                    <button class="btn-del" onclick="deleteNumber()">⌫</button><button onclick="inputNumber(0)">0</button><button class="btn-action" onclick="checkAnswer()">확인</button>
+                </div>
+                <button class="btn-next" id="btn-next" onclick="nextQuestion()">다음<br>문제<br>➡</button>
+            </div>
+        </div>
+
+        <div class="panel panel-center">
+            <div class="visualization-area" id="visualization-area">
+                <div class="visual-equation" id="visual-equation">
+                </div>
+                <div class="explanation-msg" id="explanation-msg"></div>
+                <div class="feedback-msg" id="feedback-msg"></div>
+            </div>
+        </div>
+
+        <div class="panel panel-right">
+            <div class="tracker-title" id="tracker-title">진행 상황 🚀</div>
+            <div class="tracker-list" id="tracker-list">
+            </div>
+        </div>
+        
+        <div class="overlay-screen hidden" id="end-screen"></div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- [JavaScript] -->
+    <!-- ========================================== -->
+    <script>
+        let maxQuestionsSetting = 10; 
+        let maxAnswerSetting = 25;    
+        let isHintOn = true;
+        
+        let currentQuestion = 1;     
+        let score = 0;               
+        
+        let currentNum1, currentNum2, currentOp, currentAnswer; 
+        let userInput = "";          
+        let isAnswerChecked = false; 
+
+        let errorQueue = [];         
+        let isRetryMode = false;     
+        
+        let animCounter = 0;         
+
+        function showStartScreen() {
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+        }
+
+        // [넘버블럭스 컬러 매핑]
+        function getNumberColor(num) {
+            const colors = {
+                1: { bg: '#ff4d4d', shadow: '#c0392b' }, // 1 Red
+                2: { bg: '#ffaf40', shadow: '#d35400' }, // 2 Orange
+                3: { bg: '#f1c40f', shadow: '#f39c12' }, // 3 Yellow
+                4: { bg: '#2ed573', shadow: '#27ae60' }, // 4 Green
+                5: { bg: '#1e90ff', shadow: '#2980b9' }, // 5 Blue
+                6: { bg: '#9b59b6', shadow: '#8e44ad' }, // 6 Purple
+                7: { bg: '#fd79a8', shadow: '#e84393' }, // 7 Pink
+                8: { bg: '#e84118', shadow: '#c23616' }, // 8 Magenta/Red
+                9: { bg: '#95a5a6', shadow: '#7f8c8d' }, // 9 Gray
+                0: { bg: '#00cec9', shadow: '#01a3a4' }  // 0(10) Teal/Mint
+            };
+            return colors[num % 10];
+        }
+
+        function startGame() {
+            maxAnswerSetting = parseInt(document.getElementById('max-answer').value);
+            maxQuestionsSetting = parseInt(document.getElementById('max-questions').value); 
+            isHintOn = document.getElementById('hint-toggle').value === 'on';
+            document.getElementById('start-screen').classList.add('hidden');
+            
+            currentQuestion = 1;
+            score = 0;
+            errorQueue = [];
+            isRetryMode = false;
+            
+            document.getElementById('tracker-title').innerText = "진행 상황 🚀";
+            const trackerList = document.getElementById('tracker-list');
+            trackerList.innerHTML = '';
+            for (let i = 1; i <= maxQuestionsSetting; i++) {
+                const item = document.createElement('div');
+                item.className = 'tracker-item';
+                item.id = `track-item-${i}`;
+                item.innerHTML = `<span>문제 ${i}</span> <span class="mark" id="track-mark-${i}">-</span>`;
+                trackerList.appendChild(item);
+            }
+            
+            generateProblem(); 
+        }
+
+        function getMathLogic() {
+            const operators = ['+', '+', '-', '-', '×', '÷']; 
+            let op = operators[Math.floor(Math.random() * operators.length)];
+
+            let n1, n2, ans;
+            if (op === '+') {
+                ans = Math.floor(Math.random() * (maxAnswerSetting - 1)) + 2; 
+                n1 = Math.floor(Math.random() * (ans - 1)) + 1; 
+                n2 = ans - n1;
+            } else if (op === '-') {
+                n1 = Math.floor(Math.random() * (maxAnswerSetting - 1)) + 2; 
+                n2 = Math.floor(Math.random() * (n1 - 1)) + 1; 
+                ans = n1 - n2;
+            } else if (op === '×') {
+                let maxFactor = Math.min(9, maxAnswerSetting);
+                n1 = Math.floor(Math.random() * (maxFactor - 1)) + 2; 
+                let maxN2 = Math.floor(maxAnswerSetting / n1);
+                if (maxN2 < 1) maxN2 = 1;
+                n2 = Math.floor(Math.random() * maxN2) + 1; 
+                ans = n1 * n2;
+            } else if (op === '÷') {
+                let maxDivisor = Math.min(9, maxAnswerSetting);
+                n2 = Math.floor(Math.random() * (maxDivisor - 1)) + 2; 
+                let maxAns = Math.floor(maxAnswerSetting / n2);
+                if (maxAns < 1) maxAns = 1;
+                ans = Math.floor(Math.random() * maxAns) + 1;
+                n1 = ans * n2;
+            }
+            return { n1, n2, op, ans }; 
+        }
+
+        function generateProblem() {
+            userInput = "";
+            isAnswerChecked = false;
+            updateDisplay();
+            
+            document.getElementById('keypad').style.pointerEvents = 'auto';
+            document.getElementById('keypad').style.opacity = '1';
+            document.getElementById('btn-next').classList.remove('show');
+            document.getElementById('input-display').style.borderColor = 'transparent';
+            
+            const visArea = document.getElementById('visualization-area');
+            document.getElementById('explanation-msg').innerText = "";
+            document.getElementById('feedback-msg').innerText = "";
+            
+            visArea.style.opacity = '0';
+            visArea.style.visibility = 'hidden';
+            
+            animCounter = 0; 
+
+            if (!isRetryMode) {
+                document.querySelectorAll('.tracker-item').forEach(el => el.classList.remove('active'));
+                const curTrack = document.getElementById(`track-item-${currentQuestion}`);
+                if(curTrack) {
+                    curTrack.classList.add('active'); 
+                    curTrack.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                }
+                
+                document.getElementById('q-number').innerText = `문제 ${currentQuestion} / ${maxQuestionsSetting}`;
+
+                const logic = getMathLogic();
+                currentNum1 = logic.n1; currentNum2 = logic.n2; currentOp = logic.op; currentAnswer = logic.ans;
+            } else {
+                document.getElementById('tracker-title').innerText = "오답 다시 풀기 💪";
+                const logic = errorQueue.shift(); 
+                currentNum1 = logic.n1; currentNum2 = logic.n2; currentOp = logic.op; currentAnswer = logic.ans;
+                
+                document.getElementById('q-number').innerText = `틀린 문제 복습 (남은 문제: ${errorQueue.length + 1})`;
+                document.querySelectorAll('.tracker-item').forEach(el => el.classList.remove('active'));
+            }
+            
+            document.getElementById('problem').innerText = `${currentNum1} ${currentOp} ${currentNum2} = ?`;
+
+            // 문제 도움(힌트) 켜져있으면 렌더링
+            if (isHintOn) {
+                renderHint();
+            }
+        }
+
+        function renderHint() {
+            const visArea = document.getElementById('visualization-area');
+            const visEq = document.getElementById('visual-equation');
+            
+            visArea.style.visibility = 'visible';
+            visArea.style.opacity = '1'; 
+            animCounter = 0;
+            
+            const c1 = getNumberColor(currentNum1);
+            const c2 = getNumberColor(currentNum2);
+            
+            const maxValInEq = Math.max(currentNum1, currentNum2, currentAnswer);
+            const cfg = getSizeConfig(maxValInEq); 
+            
+            let html = "";
+            
+            if (currentOp === '+' || currentOp === '-') {
+                let eq1 = renderCubesHTML(currentNum1, c1.bg, c1.shadow, cfg, false, false);
+                let op1 = renderOperator(currentOp, false);
+                let eq2 = renderCubesHTML(currentNum2, c2.bg, c2.shadow, cfg, false, false);
+                html = `<div class="equation-row">${eq1}${op1}${eq2}</div>`;
+            } else if (currentOp === '×') {
+                let eq1 = renderCubesHTML(currentNum1, c1.bg, c1.shadow, cfg, false, false);
+                let op1 = renderOperator('×', false);
+                let numText = renderOperator(currentNum2, false);
+                html = `<div class="equation-row">${eq1}${op1}${numText}</div>`;
+            } else if (currentOp === '÷') {
+                let eq1 = renderCubesHTML(currentNum1, c1.bg, c1.shadow, cfg, false, false);
+                let op1 = renderOperator('÷', false);
+                let numText = renderOperator(currentNum2, false);
+                html = `<div class="equation-row">${eq1}${op1}${numText}</div>`;
+            }
+            
+            visEq.innerHTML = html;
+        }
+
+        function inputNumber(num) {
+            if (isAnswerChecked) return;
+            if (userInput.length < 3) { 
+                userInput += num.toString();
+                updateDisplay();
+            }
+        }
+
+        function deleteNumber() {
+            if (isAnswerChecked) return;
+            userInput = userInput.slice(0, -1); 
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            document.getElementById('input-display').innerText = userInput; 
+        }
+
+        function getSizeConfig(maxVal) {
+            let isMobile = window.innerWidth <= 900;
+            let cfg;
+            if (maxVal > 70) cfg = { s: 10, g: 2, boxP: 4, groupGap: 6, shadowX: 1, shadowY: 2 };
+            else if (maxVal > 40) cfg = { s: 14, g: 3, boxP: 5, groupGap: 8, shadowX: 1, shadowY: 2 };
+            else if (maxVal > 20) cfg = { s: 18, g: 3, boxP: 6, groupGap: 10, shadowX: 2, shadowY: 3 };
+            else if (maxVal > 10) cfg = { s: 22, g: 4, boxP: 8, groupGap: 12, shadowX: 2, shadowY: 3 };
+            else cfg = { s: 28, g: 4, boxP: 10, groupGap: 14, shadowX: 2, shadowY: 4 }; 
+            
+            // 스마트폰 환경일 경우 큐브 크기를 75% 수준으로 줄여서 스크롤 방지
+            if (isMobile) {
+                cfg.s = Math.max(8, Math.floor(cfg.s * 0.75));
+                cfg.g = Math.max(2, Math.floor(cfg.g * 0.8));
+                cfg.boxP = Math.max(3, Math.floor(cfg.boxP * 0.8));
+                cfg.groupGap = Math.max(6, Math.floor(cfg.groupGap * 0.8));
+            }
+            return cfg;
+        }
+        
+        function getNextDelay(suppress = false) {
+            if (suppress) return 0;
+            let delay = animCounter * 0.12; 
+            animCounter++;
+            return delay;
+        }
+        
+        function renderOperator(op, suppress = false) {
+            if (suppress) return `<span class="visual-operator">${op}</span>`;
+            let delay = getNextDelay();
+            return `<span class="visual-operator drop-jelly" style="animation-delay: ${delay}s;">${op}</span>`;
+        }
+
+        function renderDivider(suppress = false) {
+            if (suppress) return `<div class="visual-divider"></div>`;
+            let delay = getNextDelay();
+            return `<div class="visual-divider drop-jelly" style="animation-delay: ${delay}s;"></div>`;
+        }
+
+        function renderCubesHTML(count, bgColor, shadowColor, cfg, isGrouped = false, suppressAnim = false) {
+            let stackW = (cfg.s * 5) + (cfg.g * 4);
+            let html = `<div class="cube-stack" style="width: ${stackW}px;">`;
+            let remaining = count;
+            
+            if (remaining === 0) { 
+                 let animClass = (isGrouped || suppressAnim) ? "" : "drop-jelly";
+                 let animStyle = (isGrouped || suppressAnim) ? "" : `animation-delay: ${getNextDelay(suppressAnim)}s;`;
+                 return `<div class="cube-stack" style="width: ${stackW}px;"><div class="cube-group-10 ${animClass}" style="${animStyle}"><div class="cube-row"><div class="cube empty-cube" style="width: ${cfg.s}px; height: ${cfg.s}px;"></div></div></div></div>`;
+            }
+
+            while (remaining > 0) {
+                let groupCount = Math.min(10, remaining);
+                let animClass = (isGrouped || suppressAnim) ? "" : "drop-jelly"; 
+                let animStyle = (isGrouped || suppressAnim) ? "" : `animation-delay: ${getNextDelay(suppressAnim)}s;`;
+                
+                let botMargin = (!isGrouped && remaining > 10) ? cfg.g * 2 : 0; 
+
+                html += `<div class="cube-group-10 ${animClass}" style="${animStyle} gap: ${cfg.g}px; margin-bottom: ${botMargin}px;">`;
+                
+                let gRemain = groupCount;
+                while (gRemain > 0) {
+                    let rowCount = Math.min(5, gRemain);
+                    html += `<div class="cube-row" style="gap: ${cfg.g}px;">`;
+                    for(let i = 0; i < rowCount; i++) {
+                        let radius = Math.max(2, cfg.s/4);
+                        html += `<div class="cube" style="width: ${cfg.s}px; height: ${cfg.s}px; border-radius: ${radius}px; background-color: ${bgColor}; box-shadow: ${cfg.shadowX}px ${cfg.shadowY}px 0 ${shadowColor};"></div>`;
+                    }
+                    html += '</div>';
+                    gRemain -= rowCount;
+                }
+                html += '</div>';
+                remaining -= groupCount;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function checkAnswer() {
+            if (userInput === "" || isAnswerChecked) return;
+            isAnswerChecked = true;
+            
+            let sup = isHintOn; 
+            if (!sup) animCounter = 0; 
+
+            const ans = parseInt(userInput);
+            const isCorrect = (ans === currentAnswer);
+            
+            if (!isCorrect) {
+                errorQueue.push({ n1: currentNum1, n2: currentNum2, op: currentOp, ans: currentAnswer });
+            }
+            
+            if (!isRetryMode) {
+                const markEl = document.getElementById(`track-mark-${currentQuestion}`);
+                if (isCorrect) {
+                    markEl.innerText = '⭕';
+                    markEl.style.color = 'var(--success)';
+                    score++;
+                } else {
+                    markEl.innerText = '❌';
+                    markEl.style.color = 'var(--error)';
+                }
+            }
+
+            const visArea = document.getElementById('visualization-area');
+            const visEq = document.getElementById('visual-equation');
+            const expEl = document.getElementById('explanation-msg');
+            const msgEl = document.getElementById('feedback-msg');
+            
+            visArea.style.visibility = 'visible';
+            visArea.style.opacity = '1'; 
+            
+            const c1 = getNumberColor(currentNum1);
+            const c2 = getNumberColor(currentNum2);
+            const c3 = getNumberColor(currentAnswer);
+            
+            const maxValInEq = Math.max(currentNum1, currentNum2, currentAnswer);
+            const cfg = getSizeConfig(maxValInEq); 
+            
+            let equationHTML = "";
+            
+            if (currentOp === '+' || currentOp === '-') {
+                let eq1 = renderCubesHTML(currentNum1, c1.bg, c1.shadow, cfg, false, sup);
+                let op1 = renderOperator(currentOp, sup);
+                let eq2 = renderCubesHTML(currentNum2, c2.bg, c2.shadow, cfg, false, sup);
+                
+                let row1 = `<div class="equation-row">${eq1}${op1}${eq2}</div>`;
+                let divider = renderDivider(false);
+                let op2 = renderOperator('=', false);
+                let eq3 = renderCubesHTML(currentAnswer, c3.bg, c3.shadow, cfg, false, false);
+                
+                let row2 = `<div class="equation-row">${op2}${eq3}</div>`;
+                equationHTML = row1 + divider + row2;
+                
+            } else if (currentOp === '×') {
+                const palette = ['#ff4d4d', '#ffaf40', '#f1c40f', '#2ed573', '#1e90ff', '#9b59b6', '#fd79a8', '#00cec9'];
+                const shadowPal = ['#c0392b', '#d35400', '#f39c12', '#27ae60', '#2980b9', '#8e44ad', '#e84393', '#01a3a4'];
+                
+                let eq1 = renderCubesHTML(currentNum1, c1.bg, c1.shadow, cfg, false, sup);
+                let op1 = renderOperator('×', sup);
+                let numText = renderOperator(currentNum2, sup);
+                
+                let row1 = `<div class="equation-row">${eq1}${op1}${numText}</div>`;
+                let divider = renderDivider(false);
+                let op2 = renderOperator('=', false);
+                
+                let groupsHTML = `<div class="grouped-container" style="gap: ${cfg.groupGap}px;">`;
+                for(let i=0; i<currentNum2; i++) {
+                    let delay = getNextDelay(false);
+                    let bg = palette[i % palette.length];
+                    let sh = shadowPal[i % shadowPal.length];
+                    groupsHTML += `<div class="drop-jelly" style="animation-delay: ${delay}s;">${renderCubesHTML(currentNum1, bg, sh, cfg, true, true)}</div>`;
+                }
+                groupsHTML += '</div>';
+                
+                let row2 = `<div class="equation-row">${op2}${groupsHTML}</div>`;
+                equationHTML = row1 + divider + row2;
+                
+            } else if (currentOp === '÷') {
+                let eq1 = renderCubesHTML(currentNum1, c1.bg, c1.shadow, cfg, false, sup);
+                let op1 = renderOperator('÷', sup);
+                let numText = renderOperator(currentNum2, sup);
+                
+                let row1 = `<div class="equation-row">${eq1}${op1}${numText}</div>`;
+                let divider = renderDivider(false);
+                let op2 = renderOperator('=', false);
+                
+                let groupsHTML = `<div class="grouped-container" style="gap: ${cfg.groupGap}px;">`;
+                for(let i=0; i<currentAnswer; i++) {
+                    let borderW = Math.max(1, cfg.boxP/3);
+                    let delay = getNextDelay(false);
+                    groupsHTML += `<div class="dashed-box drop-jelly" style="padding: ${cfg.boxP}px; border-width: ${borderW}px; animation-delay: ${delay}s;">${renderCubesHTML(currentNum2, c3.bg, c3.shadow, cfg, true, true)}</div>`;
+                }
+                groupsHTML += '</div>';
+                
+                let row2 = `<div class="equation-row" style="margin-bottom: 10px;">${op2}</div>`;
+                let row3 = `<div class="equation-row">${groupsHTML}</div>`;
+                
+                equationHTML = row1 + divider + row2 + row3;
+            }
+                               
+            visEq.innerHTML = equationHTML; 
+            
+            if (currentOp === '×') {
+                expEl.innerText = `💡 ${currentNum1}을(를) ${currentNum2}번 더해요.`;
+            } else if (currentOp === '÷') {
+                expEl.innerText = `💡 ${currentNum1}을(를) ${currentNum2}개씩 ${currentAnswer}번 묶어요.`;
+            } else if (currentOp === '+') {
+                expEl.innerText = `💡 ${currentNum1}에 ${currentNum2}을(를) 더해요.`;
+            } else if (currentOp === '-') {
+                expEl.innerText = `💡 ${currentNum1}에서 ${currentNum2}을(를) 빼요.`;
+            }
+
+            if (isCorrect) {
+                msgEl.innerText = "정답이에요! 참 잘했어요! 🎉";
+                msgEl.style.color = 'var(--success)';
+                document.getElementById('input-display').style.borderColor = 'var(--success)';
+            } else {
+                msgEl.innerText = `아쉬워요! 정답은 ${currentAnswer} 였어요.`;
+                msgEl.style.color = 'var(--error)';
+                document.getElementById('input-display').style.borderColor = 'var(--error)';
+            }
+
+            document.getElementById('keypad').style.pointerEvents = 'none';
+            document.getElementById('keypad').style.opacity = '0.4';
+            
+            document.getElementById('btn-next').classList.add('show');
+        }
+
+        function nextQuestion() {
+            if (!isRetryMode) { 
+                if (currentQuestion >= maxQuestionsSetting) {
+                    if (errorQueue.length > 0) {
+                        showRetryPromptScreen(); 
+                    } else {
+                        showFinalEndScreen(); 
+                    }
+                } else {
+                    currentQuestion++;
+                    generateProblem(); 
+                }
+            } else { 
+                if (errorQueue.length === 0) {
+                    showFinalEndScreen(); 
+                } else {
+                    generateProblem(); 
+                }
+            }
+        }
+        
+        function showRetryPromptScreen() {
+            const endScreen = document.getElementById('end-screen');
+            endScreen.innerHTML = `
+                <h2>아쉬워요! 😢</h2>
+                <p>${maxQuestionsSetting}문제 중 ${score}문제를 맞혔어요.<br>틀린 ${errorQueue.length}문제를 다시 풀어볼까요?</p>
+                <button class="btn-restart" onclick="startRetryMode()">다시 풀기 💪</button>
+            `;
+            endScreen.classList.remove('hidden');
+        }
+
+        function startRetryMode() {
+            isRetryMode = true;
+            document.getElementById('end-screen').classList.add('hidden');
+            generateProblem();
+        }
+
+        function showFinalEndScreen() {
+            const endScreen = document.getElementById('end-screen');
+            let msg = score === maxQuestionsSetting ? "모든 문제를 한 번에 맞혔어요! 천재인가요? 🌟" : "틀린 문제까지 모두 잘 풀어냈어요! 정말 대단해요! 👏";
+            
+            endScreen.innerHTML = `
+                <h2>게임 완료! 🎉</h2>
+                <p>${msg}</p>
+                <button class="btn-restart" onclick="showStartScreen()">새 게임 하기 🔄</button>
+            `;
+            endScreen.classList.remove('hidden');
+        }
+
+        window.addEventListener('keydown', function(e) {
+            if(!document.getElementById('start-screen').classList.contains('hidden') || 
+               !document.getElementById('end-screen').classList.contains('hidden')) {
+                if(e.key === 'Enter') {
+                    if(!document.getElementById('start-screen').classList.contains('hidden')) startGame();
+                    else if(!document.getElementById('end-screen').classList.contains('hidden')) {
+                        const btn = document.getElementById('end-screen').querySelector('button');
+                        if(btn) btn.click();
+                    }
+                }
+                return;
+            }
+               
+            if(e.key >= '0' && e.key <= '9') inputNumber(e.key);
+            else if(e.key === 'Backspace') deleteNumber();
+            else if(e.key === 'Enter') {
+                if(isAnswerChecked && document.getElementById('btn-next').classList.contains('show')) {
+                    nextQuestion();
+                } else if(!isAnswerChecked && userInput !== "") {
+                    checkAnswer();
+                }
+            }
+        });
+
+        window.onload = showStartScreen;
+    </script>
+</body>
+</html>
